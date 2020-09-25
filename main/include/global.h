@@ -20,7 +20,7 @@
 #include <time.h>
 #include <cJSON.h>
 
-#define FIRMWARE_VERSION 2
+#define FIRMWARE_VERSION 3
 
 #define FACTORY_PARTITION_LABEL     "fact_cfg"
 #define FACTORY_PARTITION_NAMESPACE "irbfactory"

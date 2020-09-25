@@ -30,6 +30,7 @@ typedef enum {
     LED_ON,
     LED_QUICK_BLINK,
     LED_SLOW_BLINK,
+    LED_MEDIUM_BLINK,
 } led_status_t;
 
 typedef enum {
@@ -52,11 +53,12 @@ esp_err_t iot_led_setup();
  * @brief led blink frequency update
  * @param quick_blink_freq quick blink frequency
  * @param slow_blink_freq slow blink frequency
+ * @param medium_blink_freq medium blink frequency
  * @return
  *     - ESP_OK: success
  *     - others: fail
  */
-esp_err_t iot_led_update_blink_freq(int quick_blink_freq, int slow_blink_freq);
+esp_err_t iot_led_update_blink_freq(int quick_blink_freq, int slow_blink_freq, int medium_blink_freq);
 
 /**
   * @brief  create new led.

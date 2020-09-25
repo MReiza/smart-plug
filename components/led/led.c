@@ -22,20 +22,23 @@
 #define QUICK_BLINK_FREQ            CONFIG_STATUS_LED_QUICK_BLINK_FREQ     /*!< default 5 */
 #define SLOW_BLINK_FREQ             CONFIG_STATUS_LED_SLOW_BLINK_FREQ      /*!< default 1 */
 #define LED_SPEED_MODE              CONFIG_STATUS_LED_SPEED_MODE           /*!< default LEDC_HIGH_SPEED_MODE */
+#define MEDIUM_BLINK_FREQ           CONFIG_STATUS_LED_MEDIUM_BLINK_FREQ
 
 #define LED_QUICK_BLINK_CHANNEL     CONFIG_STATUS_LED_QUICK_BLINK_CHANNEL  /*!< default 0 */
 #define LED_SLOW_BLINK_CHANNEL      CONFIG_STATUS_LED_SLOW_BLINK_CHANNEL   /*!< default 1 */
 #define LED_NIGHT_MODE_CHANNEL      CONFIG_STATUS_LED_NIGHT_MODE_CHANNEL   /*!< default 2 */
-
+#define LED_MEDIUM_BLINK_CHANNEL    CONFIG_STATUS_LED_MEDIUM_BLINK_CHANNEL
 
 #define LED_QUICK_BLINK_TIMER       CONFIG_STATUS_LED_QUICK_BLINK_TIMER    /*!< default 0 */
 #define LED_SLOW_BLINK_TIMER        CONFIG_STATUS_LED_SLOW_BLINK_TIMER     /*!< default 1 */
 #define LED_NORMAL_TIMER            CONFIG_STATUS_LED_NIGHT_MODE_TIMER     /*!< default 2 */
+#define LED_MEDIUM_BLINK_TIMER      CONFIG_STATUS_LED_MEDIUM_BLINK_TIMER
 
 #define LED_LONG_BRIGHT_FRE         5000
 #define LED_TIMER_BIT               LEDC_TIMER_13_BIT
 #define LED_BRIGHT_DUTY             ((1 << LED_TIMER_BIT) - 1)
 #define LED_SLOW_BLINK_DUTY         (LED_BRIGHT_DUTY / 2)
+#define LED_MEDIUM_BLINK_DUTY       (LED_BRIGHT_DUTY / 2)
 #define LED_QUICK_BLINK_DUTY        (LED_BRIGHT_DUTY / 2)
 #define IOT_CHECK(tag, a, ret)  if(!(a)) {                                 \
         ESP_LOGE(tag,"%s:%d (%s)", __FILE__, __LINE__, __FUNCTION__);      \
@@ -118,17 +121,25 @@ static esp_err_t led_slow_blink(led_handle_t led_handle)
     return ESP_OK;
 }
 
-esp_err_t iot_led_update_blink_freq(int quick_blink_freq, int slow_blink_freq)
+static esp_err_t led_medium_blink(led_handle_t led_handle)
+{
+    led_dev_t* led_dev = (led_dev_t*) led_handle;
+    ERR_ASSERT(TAG, gpio_ledc_bind(LED_MEDIUM_BLINK_TIMER, LED_MEDIUM_BLINK_CHANNEL, led_dev->io_num, LED_MEDIUM_BLINK_DUTY, LED_SPEED_MODE));
+    return ESP_OK;
+}
+
+esp_err_t iot_led_update_blink_freq(int quick_blink_freq, int slow_blink_freq, int medium_blink_freq)
 {
     ERR_ASSERT(TAG, led_ledctimer_set(LED_QUICK_BLINK_TIMER, quick_blink_freq, LED_SPEED_MODE));
     ERR_ASSERT(TAG, led_ledctimer_set(LED_SLOW_BLINK_TIMER, slow_blink_freq, LED_SPEED_MODE));
+    ERR_ASSERT(TAG, led_ledctimer_set(LED_MEDIUM_BLINK_TIMER, medium_blink_freq, LED_SPEED_MODE));
     return ESP_OK;
 }
 
 esp_err_t iot_led_setup()
 {
     ERR_ASSERT(TAG, led_ledctimer_set(LED_NORMAL_TIMER, LED_LONG_BRIGHT_FRE, LED_SPEED_MODE));
-    iot_led_update_blink_freq(QUICK_BLINK_FREQ, SLOW_BLINK_FREQ);
+    iot_led_update_blink_freq(QUICK_BLINK_FREQ, SLOW_BLINK_FREQ, MEDIUM_BLINK_FREQ);
     return ESP_OK;
 }
 
@@ -170,6 +181,9 @@ esp_err_t iot_led_state_write(led_handle_t led_handle, led_status_t state)
             break;
         case LED_SLOW_BLINK:
             led_slow_blink(led_handle);
+            break;
+        case LED_MEDIUM_BLINK:
+            led_medium_blink(led_handle);
             break;
         default:
             break;

@@ -100,6 +100,11 @@ esp_err_t led_slow_blink(void)
     return iot_led_state_write(led_handle, LED_SLOW_BLINK);
 }
 
+esp_err_t led_medium_blink(void)
+{
+    return iot_led_state_write(led_handle, LED_MEDIUM_BLINK);
+}
+
 void driver_init(void)
 {
     relay_io_t relay_io = {

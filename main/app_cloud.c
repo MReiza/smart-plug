@@ -26,7 +26,7 @@ char device_id[12];
 char version_name[32];
 
 iotc_mqtt_qos_t iotc_example_qos = IOTC_MQTT_QOS_AT_LEAST_ONCE;
-static iotc_timed_task_handle_t telemetry_publish_task = IOTC_INVALID_TIMED_TASK_HANDLE;
+static iotc_timed_task_handle_t telemetry_publish_task, state_publish_task = IOTC_INVALID_TIMED_TASK_HANDLE;
 iotc_context_handle_t iotc_context = IOTC_INVALID_CONTEXT_HANDLE;
 
 static const char *TAG = "IOTC";
@@ -201,26 +201,14 @@ void on_connection_state_changed(iotc_context_handle_t in_context_handle, void *
 
     switch (conn_data->connection_state)
     {
-    /* IOTC_CONNECTION_STATE_OPENED means that the connection has been
-       established and the IoTC Client is ready to send/recv messages */
     case IOTC_CONNECTION_STATE_OPENED:
         ESP_LOGI(TAG, "Connected to IOTC");
-
-        /* Publish immediately upon connect. 'publish_function' is defined
-           in this example file and invokes the IoTC API to publish a
-           message. */
         asprintf(&subscribe_topic_command, SUBSCRIBE_TOPIC_COMMAND, device_id);
         ESP_LOGI(TAG, "Subscribe to topic:\"%s\"", subscribe_topic_command);
-        iotc_subscribe(in_context_handle, subscribe_topic_command, IOTC_MQTT_QOS_AT_LEAST_ONCE,
-                       &iotc_mqttlogic_subscribe_callback, /*user_data=*/NULL);
+        iotc_subscribe(in_context_handle, subscribe_topic_command, IOTC_MQTT_QOS_AT_LEAST_ONCE, &iotc_mqttlogic_subscribe_callback, NULL);
 
-        // asprintf(&subscribe_topic_config, SUBSCRIBE_TOPIC_CONFIG, device_id);
-        // ESP_LOGI(TAG, "Subscribe to topic:\"%s\"", subscribe_topic_config);
-        // iotc_subscribe(in_context_handle, subscribe_topic_config, IOTC_MQTT_QOS_AT_LEAST_ONCE,
-        //                &iotc_mqttlogic_subscribe_callback, /*user_data=*/NULL);
-
-        /* Create a timed task to publish every 10 seconds. */
-        telemetry_publish_task = iotc_schedule_timed_task(in_context_handle, publish_telemetry, 3, 15, /*user_data=*/NULL);
+        telemetry_publish_task = iotc_schedule_timed_task(in_context_handle, publish_telemetry, 3, 15, NULL);
+        state_publish_task = iotc_schedule_timed_task(in_context_handle, publish_state, 60, 15, NULL);
 
         publish_state(in_context_handle, IOTC_INVALID_TIMED_TASK_HANDLE, NULL);
         publish_telemetry(in_context_handle, IOTC_INVALID_TIMED_TASK_HANDLE, NULL);
@@ -231,56 +219,31 @@ void on_connection_state_changed(iotc_context_handle_t in_context_handle, void *
             led_off();
         break;
 
-    /* IOTC_CONNECTION_STATE_OPEN_FAILED is set when there was a problem
-       when establishing a connection to the server. The reason for the error
-       is contained in the 'state' variable. Here we log the error state and
-       exit out of the application. */
-
-    /* Publish immediately upon connect. 'publish_function' is defined
-       in this example file and invokes the IoTC API to publish a
-       message. */
     case IOTC_CONNECTION_STATE_OPEN_FAILED:
         ESP_LOGE(TAG, "Failed to establish connection, error %d", state);
-
         iotc_connect(in_context_handle, conn_data->username, conn_data->password,
                      conn_data->client_id, conn_data->connection_timeout,
                      conn_data->keepalive_timeout, &on_connection_state_changed);
         break;
 
-    /* IOTC_CONNECTION_STATE_CLOSED is set when the IoTC Client has been
-       disconnected. The disconnection may have been caused by some external
-       issue, or user may have requested a disconnection. In order to
-       distinguish between those two situation it is advised to check the state
-       variable value. If the state == IOTC_STATE_OK then the application has
-       requested a disconnection via 'iotc_shutdown_connection'. If the state !=
-       IOTC_STATE_OK then the connection has been closed from one side. */
     case IOTC_CONNECTION_STATE_CLOSED:
         free(subscribe_topic_command);
         free(subscribe_topic_config);
-        /* When the connection is closed it's better to cancel some of previously
-           registered activities. Using cancel function on handler will remove the
-           handler from the timed queue which prevents the registered handle to be
-           called when there is no connection. */
+
         if (IOTC_INVALID_TIMED_TASK_HANDLE != telemetry_publish_task)
         {
             iotc_cancel_timed_task(telemetry_publish_task);
+            iotc_cancel_timed_task(state_publish_task);
             telemetry_publish_task = IOTC_INVALID_TIMED_TASK_HANDLE;
         }
 
         if (state == IOTC_STATE_OK)
         {
-            /* The connection has been closed intentionally. Therefore, stop
-               the event processing loop as there's nothing left to do
-               in this example. */
             iotc_events_stop();
         }
         else
         {
             ESP_LOGE(TAG, "Connection closed, error %d", state);
-            /* The disconnection was unforeseen.  Try reconnect to the server
-            with previously set configuration, which has been provided
-            to this callback in the conn_data structure. */
-
             iotc_crypto_key_data_t iotc_connect_private_key_data;
             iotc_connect_private_key_data.crypto_key_signature_algorithm = IOTC_CRYPTO_KEY_SIGNATURE_ALGORITHM_ES256;
             iotc_connect_private_key_data.crypto_key_union_type = IOTC_CRYPTO_KEY_UNION_TYPE_PEM;
@@ -288,10 +251,7 @@ void on_connection_state_changed(iotc_context_handle_t in_context_handle, void *
 
             char jwt[IOTC_JWT_SIZE] = {0};
             size_t bytes_written = 0;
-            state = iotc_create_iotcore_jwt(GIOT_PROJECT_ID,
-                                            /*jwt_expiration_period_sec=*/3600,
-                                            &iotc_connect_private_key_data, jwt,
-                                            IOTC_JWT_SIZE, &bytes_written);
+            state = iotc_create_iotcore_jwt(GIOT_PROJECT_ID, 3600, &iotc_connect_private_key_data, jwt, IOTC_JWT_SIZE, &bytes_written);
             if (IOTC_STATE_OK != state)
             {
                 ESP_LOGE(TAG, "Failed to create JWT, error %d", state);
@@ -313,27 +273,18 @@ void on_connection_state_changed(iotc_context_handle_t in_context_handle, void *
 
 static void mqtt_task(void *pvParameters)
 {
-    /* Format the key type descriptors so the client understands
-     which type of key is being represented. In this case, a PEM encoded
-     byte array of a ES256 key. */
     iotc_crypto_key_data_t iotc_connect_private_key_data;
     iotc_connect_private_key_data.crypto_key_signature_algorithm = IOTC_CRYPTO_KEY_SIGNATURE_ALGORITHM_ES256;
     iotc_connect_private_key_data.crypto_key_union_type = IOTC_CRYPTO_KEY_UNION_TYPE_PEM;
     iotc_connect_private_key_data.crypto_key_union.key_pem.key = private_key;
 
-    /* initialize iotc library and create a context to use to connect to the
-    * GCP IoT Core Service. */
     const iotc_state_t error_init = iotc_initialize();
-
     if (IOTC_STATE_OK != error_init)
     {
         printf(" iotc failed to initialize, error: %d\n", error_init);
         vTaskDelete(NULL);
     }
 
-    /*  Create a connection context. A context represents a Connection
-        on a single socket, and can be used to publish and subscribe
-        to numerous topics. */
     iotc_context = iotc_create_context();
     if (IOTC_INVALID_CONTEXT_HANDLE >= iotc_context)
     {
@@ -341,23 +292,12 @@ static void mqtt_task(void *pvParameters)
         vTaskDelete(NULL);
     }
 
-    /*  Queue a connection request to be completed asynchronously.
-        The 'on_connection_state_changed' parameter is the name of the
-        callback function after the connection request completes, and its
-        implementation should handle both successful connections and
-        unsuccessful connections as well as disconnections. */
     const uint16_t connection_timeout = 0;
-    const uint16_t keepalive_timeout = 60;
+    const uint16_t keepalive_timeout = 180;
 
-    /* Generate the client authentication JWT, which will serve as the MQTT
-     * password. */
     char jwt[IOTC_JWT_SIZE] = {0};
     size_t bytes_written = 0;
-    iotc_state_t state = iotc_create_iotcore_jwt(GIOT_PROJECT_ID,
-                                                 /*jwt_expiration_period_sec=*/3600,
-                                                 &iotc_connect_private_key_data, jwt,
-                                                 IOTC_JWT_SIZE, &bytes_written);
-
+    iotc_state_t state = iotc_create_iotcore_jwt(GIOT_PROJECT_ID, 3600, &iotc_connect_private_key_data, jwt, IOTC_JWT_SIZE, &bytes_written);
     if (IOTC_STATE_OK != state)
     {
         printf("iotc_create_iotcore_jwt returned with error: %ul", state);
@@ -366,17 +306,11 @@ static void mqtt_task(void *pvParameters)
 
     char *device_path = NULL;
     asprintf(&device_path, DEVICE_PATH, GIOT_PROJECT_ID, GIOT_REGION, GIOT_REGISTRY_ID, device_id);
-    iotc_connect(iotc_context, NULL, jwt, device_path, connection_timeout,
+    iotc_connect(iotc_context, NULL, jwt,
+                 device_path, connection_timeout,
                  keepalive_timeout, &on_connection_state_changed);
     free(device_path);
-    /* The IoTC Client was designed to be able to run on single threaded devices.
-        As such it does not have its own event loop thread. Instead you must
-        regularly call the function iotc_events_process_blocking() to process
-        connection requests, and for the client to regularly check the sockets for
-        incoming data. This implementation has the loop operate endlessly. The loop
-        will stop after closing the connection, using iotc_shutdown_connection() as
-        defined in on_connection_state_change logic, and exit the event handler
-        handler by calling iotc_events_stop(); */
+
     iotc_events_process_blocking();
 
     iotc_delete_context(iotc_context);

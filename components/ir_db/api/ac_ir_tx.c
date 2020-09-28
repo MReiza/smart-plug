@@ -498,15 +498,14 @@ static int rmt_build_items(rmt_item32_t *item)
 static void IR_Generate()
 {
     int item_num = 0;
-    int channel = RMT_TX_CHANNEL;
     size_t size = (sizeof(rmt_item32_t) * RMT_DATA_ITEM_NUM);
     rmt_item32_t *item = (rmt_item32_t *)malloc(size);
     memset((void *)item, 0, size);
     item_num = rmt_build_items(item);
-    rmt_write_items(channel, item, item_num, true);
-    rmt_wait_tx_done(channel, portMAX_DELAY);
-    rmt_write_items(1, item, item_num, true);
-    rmt_wait_tx_done(1, portMAX_DELAY);
+    rmt_write_items(RMT_TX_CHANNEL, item, item_num, true);
+    rmt_wait_tx_done(RMT_TX_CHANNEL, portMAX_DELAY);
+    rmt_write_items(RMT_EXT_CHANNEL, item, item_num, true);
+    rmt_wait_tx_done(RMT_EXT_CHANNEL, portMAX_DELAY);
     free(item);
 }
 

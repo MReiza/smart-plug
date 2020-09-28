@@ -35,10 +35,15 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
         if (provisioned)
+        {
             esp_wifi_connect();
+            led_medium_blink();
+        }
         else
+        {
             xTaskCreate(smartconfig_task, "smartconfig_task", 4096, NULL, 2, NULL);
-        led_slow_blink();
+            led_slow_blink();
+        }
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
@@ -46,7 +51,7 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
         {
             ESP_LOGI(TAG, "Disconnected, reconnecting to AP...");
             esp_wifi_connect();
-            led_slow_blink();
+            led_medium_blink();
             retry_num++;
         }
         else
@@ -112,7 +117,7 @@ static void smartconfig_task(void *arg)
     while (1)
     {
         bits = xEventGroupWaitBits(wifi_event_group, ESPTOUCH_DONE_BIT, pdTRUE, pdTRUE, portMAX_DELAY);
-        
+
         if (bits & ESPTOUCH_DONE_BIT)
         {
             ESP_LOGI(TAG, "Smartconfing done");

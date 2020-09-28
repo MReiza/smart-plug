@@ -14,7 +14,6 @@
 static const char *TAG = "TV_IR_TX";
 unsigned char TV_DbAccessCode = 0;
 unsigned char STB_DbAccessCode = 0;
-int channel;
 
 static STB_DB_FORM *DbPtr;
 static WAVE_FORM *WavePtr;
@@ -26,64 +25,13 @@ static unsigned char ToggleFlag = 0;
 static void IR_Generate(unsigned char keycode);
 static inline void Pulse_Gen(unsigned char pulse);
 
-/*
- * @brief RMT transmitter initialization
- */
-void tv_tx_init()
-{
-    rmt_config_t rmt_tx;
-    rmt_tx.channel = RMT_TX_CHANNEL;
-    rmt_tx.gpio_num = RMT_TX_GPIO_NUM;
-    rmt_tx.mem_block_num = 1;
-    rmt_tx.clk_div = RMT_CLK_DIV;
-    rmt_tx.tx_config.loop_en = false;
-    rmt_tx.tx_config.carrier_level = 1;
-    rmt_tx.tx_config.carrier_en = RMT_TX_CARRIER_EN;
-    rmt_tx.tx_config.idle_level = 0;
-    rmt_tx.tx_config.idle_output_en = true;
-    rmt_tx.rmt_mode = 0;
-
-    rmt_tx.tx_config.carrier_freq_hz = 38500;
-    rmt_tx.tx_config.carrier_duty_percent = 30;
-
-    RMT.carrier_duty_ch[RMT_TX_CHANNEL].high = TV_WaveForm[TV_DbForm[TV_DbAccessCode].WaveForm].Freq.High * 10;
-    RMT.carrier_duty_ch[RMT_TX_CHANNEL].low = TV_WaveForm[TV_DbForm[TV_DbAccessCode].WaveForm].Freq.Low * 10;
-
-    rmt_config(&rmt_tx);
-
-    rmt_driver_install(rmt_tx.channel, 0, 0);
-}
-
-void stb_tx_init()
-{
-    rmt_config_t rmt_tx;
-    rmt_tx.channel = RMT_TX_CHANNEL;
-    rmt_tx.gpio_num = RMT_TX_GPIO_NUM;
-    rmt_tx.mem_block_num = 1;
-    rmt_tx.clk_div = RMT_CLK_DIV;
-    rmt_tx.tx_config.loop_en = false;
-    rmt_tx.tx_config.carrier_level = 1;
-    rmt_tx.tx_config.carrier_en = RMT_TX_CARRIER_EN;
-    rmt_tx.tx_config.idle_level = 0;
-    rmt_tx.tx_config.idle_output_en = true;
-    rmt_tx.rmt_mode = 0;
-
-    rmt_tx.tx_config.carrier_freq_hz = 38500;
-    rmt_tx.tx_config.carrier_duty_percent = 30;
-
-    RMT.carrier_duty_ch[RMT_TX_CHANNEL].high = TV_WaveForm[STB_DbForm[STB_DbAccessCode].WaveForm].Freq.High * 10;
-    RMT.carrier_duty_ch[RMT_TX_CHANNEL].low = TV_WaveForm[STB_DbForm[STB_DbAccessCode].WaveForm].Freq.Low * 10;
-
-    rmt_config(&rmt_tx);
-
-    rmt_driver_install(rmt_tx.channel, 0, 0);
-}
-
 void TV_Brand_Set(unsigned char Set_Num)
 {
     find_set_num(Set_Num, &TV_DbForm[0].Num, tvdb_size, sizeof(TV_DB_FORM), &TV_DbAccessCode);
     RMT.carrier_duty_ch[RMT_TX_CHANNEL].high = TV_WaveForm[TV_DbForm[TV_DbAccessCode].WaveForm].Freq.High * 10;
     RMT.carrier_duty_ch[RMT_TX_CHANNEL].low = TV_WaveForm[TV_DbForm[TV_DbAccessCode].WaveForm].Freq.Low * 10;
+    RMT.carrier_duty_ch[RMT_EXT_CHANNEL].high = TV_WaveForm[TV_DbForm[TV_DbAccessCode].WaveForm].Freq.High * 10;
+    RMT.carrier_duty_ch[RMT_EXT_CHANNEL].low = TV_WaveForm[TV_DbForm[TV_DbAccessCode].WaveForm].Freq.Low * 10;
 }
 
 void STB_Brand_Set(unsigned char Set_Num)
@@ -114,7 +62,6 @@ unsigned char TV_IR_TX(unsigned char keycode)
     DbPtr = &TV_DbForm[TV_DbAccessCode];
     WavePtr = &TV_WaveForm[DbPtr->WaveForm];
     DataPtr = &TV_DataForm[DbPtr->DataForm];
-    channel = RMT_TX_CHANNEL;
 
     if (DbPtr->Key[keycode] == 0xff)
         return UNUSED_KEY;
@@ -131,7 +78,6 @@ unsigned char STB_IR_TX(unsigned char keycode)
     DbPtr = &STB_DbForm[STB_DbAccessCode];
     WavePtr = &TV_WaveForm[DbPtr->WaveForm];
     DataPtr = &TV_DataForm[DbPtr->DataForm];
-    channel = RMT_TX_CHANNEL;
 
     if (DbPtr->Key[keycode] == 0xff)
         return UNUSED_KEY;
@@ -218,8 +164,8 @@ static inline void Pulse_Gen(unsigned char pulse)
 
         item->level1 = (*pol) - 1;
         item->duration1 = (*time) / 10 * RMT_TICK_10_US;
-        rmt_write_items(channel, item, 1, true);
-        rmt_write_items(1, item, 1, true);
+        rmt_write_items(RMT_TX_CHANNEL, item, 1, false);
+        rmt_write_items(RMT_EXT_CHANNEL, item, 1, false);
         seq++;
 
         if (seq >= 6)

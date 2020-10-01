@@ -5,7 +5,6 @@ idf_component_register(SRCS "app_main.c"
                             "app_ota.c"
                             "app_scene.c"
 							"app_uart.c"
-                            #"app_webserver.c"
                             "app_wifi.c"
                     INCLUDE_DIRS "include"
                     EMBED_TXTFILES ${PROJECT_DIR}/certs/ca_cert.pem)

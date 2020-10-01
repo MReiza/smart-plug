@@ -18,7 +18,7 @@
 #define PUBLISH_TOPIC_EVENT "/devices/%s/events"
 #define PUBLISH_TOPIC_STATE "/devices/%s/state"
 #define STATE_DATA "{\"DeviceID\":\"%s\",\"FwVersion\":\"%s\",\"RelayState\":\"%s\"}"
-#define POWER_DATA "{\"content_type\":\"power_data\",\"content_value\":{\"active_power\":\"%s\",\"reactive_power\":\"0.00\",\"apparent_power\":\"0.00\"}}"
+#define POWER_DATA "{\"content_type\":\"power_data\",\"content_value\":{\"active_power\":\"%.2f\",\"current_rms\":\"%.2f\",\"voltage_rms\":\"%.2f\"}}"
 
 char *subscribe_topic_command, *subscribe_topic_config;
 char *private_key;
@@ -122,7 +122,7 @@ void publish_state(iotc_context_handle_t context_handle, iotc_timed_task_handle_
     asprintf(&publish_topic, PUBLISH_TOPIC_STATE, device_id);
     asprintf(&publish_message, STATE_DATA, device_id, version_name, relay_get_state() ? "ON" : "OFF");
 
-    ESP_LOGI(TAG, "Publishing device state \"%s\"", publish_message);
+    ESP_LOGI(TAG, "Publishing state: \"%s\"", publish_message);
 
     iotc_publish(context_handle, publish_topic, publish_message, iotc_example_qos, publish_state_cb, NULL);
 
@@ -138,20 +138,17 @@ void publish_telemetry(iotc_context_handle_t context_handle, iotc_timed_task_han
     bool is_relay_closed = relay_get_state();
     if (is_relay_closed)
     {
-        char *current_power = NULL;
         char *publish_topic = NULL;
         char *publish_message = NULL;
 
         uart_read_data(PAAVG, 5);
 
-        asprintf(&current_power, "%.2f", power_read);
         asprintf(&publish_topic, PUBLISH_TOPIC_EVENT, device_id);
-        asprintf(&publish_message, POWER_DATA, current_power);
+        asprintf(&publish_message, POWER_DATA, power_read, current_read, voltage_read);
 
         iotc_publish(context_handle, publish_topic, publish_message, iotc_example_qos, NULL, NULL);
-        ESP_LOGI(TAG, "Publishing telemetry event \"%s\"", publish_message);
+        ESP_LOGI(TAG, "Publishing telemetry: \"%s\"", publish_message);
 
-        free(current_power);
         free(publish_topic);
         free(publish_message);
     }

@@ -20,7 +20,7 @@ static DATA_FORM *DataPtr;
 
 static void Verify_data();
 static void IR_Generate();
-static void Pulse_Gen(unsigned char pulse, rmt_item32_t *item);
+static inline void Pulse_Gen(unsigned char pulse, rmt_item32_t *item);
 static void Init_Output_Buf();
 
 void AC_Brand_Set(unsigned short Set_Num)
@@ -38,8 +38,6 @@ void AC_Brand_Set(unsigned short Set_Num)
 
     RMT.carrier_duty_ch[RMT_TX_CHANNEL].high = WavePtr->Freq.High * 10;
     RMT.carrier_duty_ch[RMT_TX_CHANNEL].low = WavePtr->Freq.Low * 10;
-    RMT.carrier_duty_ch[1].high = WavePtr->Freq.High * 10;
-    RMT.carrier_duty_ch[1].low = WavePtr->Freq.Low * 10;
     Init_Output_Buf();
 }
 
@@ -502,14 +500,12 @@ static void IR_Generate()
     rmt_item32_t *item = (rmt_item32_t *)malloc(size);
     memset((void *)item, 0, size);
     item_num = rmt_build_items(item);
+    gpio_matrix_out(RMT_TX_EXTENDER_GPIO, RMT_TX_SIGNAL_IDX, false, false);
     rmt_write_items(RMT_TX_CHANNEL, item, item_num, true);
-    rmt_wait_tx_done(RMT_TX_CHANNEL, portMAX_DELAY);
-    rmt_write_items(RMT_EXT_CHANNEL, item, item_num, true);
-    rmt_wait_tx_done(RMT_EXT_CHANNEL, portMAX_DELAY);
     free(item);
 }
 
-static void Pulse_Gen(unsigned char pulse, rmt_item32_t *item)
+static inline void Pulse_Gen(unsigned char pulse, rmt_item32_t *item)
 {
     unsigned char seq = 0;
     unsigned short *time;

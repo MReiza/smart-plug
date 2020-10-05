@@ -23,17 +23,16 @@ static void publish_timer_cb(void *arg)
 
 static void publish_timer_init(void)
 {
-    const esp_timer_create_args_t publish_timer_args = {
+    esp_timer_create_args_t publish_timer_args = {
         .callback = &publish_timer_cb,
-        .name = "once",
     };
     ESP_ERROR_CHECK(esp_timer_create(&publish_timer_args, &publish_timer));
 }
 
 static void button_tap_cb(void *arg)
 {
-    bool relay_state = relay_get_state();
-    relay_set_state(!relay_state);
+    bool output_state = relay_get_state();
+    relay_set_state(!output_state);
 }
 
 static void button_press_5s_cb(void *arg)
@@ -42,14 +41,14 @@ static void button_press_5s_cb(void *arg)
     esp_restart();
 }
 
-esp_err_t relay_on(void)
+void relay_on(void)
 {
-    return iot_relay_state_write(relay_handle, RELAY_STATUS_CLOSE);
+    iot_relay_state_write(relay_handle, RELAY_STATUS_CLOSE);
 }
 
-esp_err_t relay_off(void)
+void relay_off(void)
 {
-    return iot_relay_state_write(relay_handle, RELAY_STATUS_OPEN);
+    iot_relay_state_write(relay_handle, RELAY_STATUS_OPEN);
 }
 
 void relay_set_state(bool state)
@@ -76,33 +75,43 @@ void relay_set_state(bool state)
 
 bool relay_get_state(void)
 {
-    relay_status_t relay_status = iot_relay_state_read(relay_handle);
-    return relay_status == RELAY_STATUS_CLOSE;
+    return iot_relay_state_read(relay_handle) == RELAY_STATUS_CLOSE ? true : false;
 }
 
-esp_err_t led_off(void)
+void led_off(void)
 {
-    return iot_led_state_write(led_handle, LED_OFF);
+    iot_led_state_write(led_handle, LED_OFF);
 }
 
-esp_err_t led_on(void)
+void led_on(void)
 {
-    return iot_led_state_write(led_handle, LED_ON);
+    iot_led_state_write(led_handle, LED_ON);
 }
 
-esp_err_t led_quick_blink(void)
+void led_quick_blink(void)
 {
-    return iot_led_state_write(led_handle, LED_QUICK_BLINK);
+    iot_led_state_write(led_handle, LED_QUICK_BLINK);
 }
 
-esp_err_t led_slow_blink(void)
+void led_slow_blink(void)
 {
-    return iot_led_state_write(led_handle, LED_SLOW_BLINK);
+    iot_led_state_write(led_handle, LED_SLOW_BLINK);
 }
 
-esp_err_t led_medium_blink(void)
+void led_medium_blink(void)
 {
-    return iot_led_state_write(led_handle, LED_MEDIUM_BLINK);
+    iot_led_state_write(led_handle, LED_MEDIUM_BLINK);
+}
+
+void led_recv_message(void)
+{
+    led_status_t prev_led_state = iot_led_state_read(led_handle);
+    for (int i = 0; i < 5; i++)
+    {
+        iot_led_state_write(led_handle, i % 2);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+    iot_led_state_write(led_handle, prev_led_state);
 }
 
 void driver_init(void)

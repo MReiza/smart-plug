@@ -29,6 +29,9 @@ iotc_mqtt_qos_t iotc_example_qos = IOTC_MQTT_QOS_AT_LEAST_ONCE;
 static iotc_timed_task_handle_t telemetry_publish_task, state_publish_task = IOTC_INVALID_TIMED_TASK_HANDLE;
 iotc_context_handle_t iotc_context = IOTC_INVALID_CONTEXT_HANDLE;
 
+static esp_timer_handle_t publish_timer;
+static bool publish_ready;
+
 static const char *TAG = "IOTC";
 
 void parse_cmd(char *payload);
@@ -109,6 +112,7 @@ static void obtain_time(void)
 void publish_state_cb(iotc_context_handle_t context_handle, void *data, iotc_state_t state)
 {
     ESP_LOGI(TAG, "Response received %d", state);
+    publish_ready = true;
 }
 
 void publish_state(iotc_context_handle_t context_handle, iotc_timed_task_handle_t timed_task, void *user_data)
@@ -159,8 +163,25 @@ void cloud_publish(void)
     if (iotc_context == IOTC_INVALID_CONTEXT_HANDLE)
         return;
 
-    publish_telemetry(iotc_context, IOTC_INVALID_TIMED_TASK_HANDLE, NULL);
-    publish_state(iotc_context, IOTC_INVALID_TIMED_TASK_HANDLE, NULL);
+    if (publish_ready)
+    {
+        publish_telemetry(iotc_context, IOTC_INVALID_TIMED_TASK_HANDLE, NULL);
+        publish_state(iotc_context, IOTC_INVALID_TIMED_TASK_HANDLE, NULL);
+        publish_ready = false;
+    }
+    else
+    {
+        esp_timer_stop(publish_timer);
+        esp_timer_start_once(publish_timer, 500000);
+    }
+}
+
+static void publish_timer_init(void)
+{
+    esp_timer_create_args_t publish_timer_args = {
+        .callback = &cloud_publish,
+    };
+    esp_timer_create(&publish_timer_args, &publish_timer);
 }
 
 void iotc_mqttlogic_subscribe_callback(
@@ -352,6 +373,7 @@ void google_iot_init(void)
     get_device_id(device_id, sizeof(device_id));
     obtain_time();
     xTaskCreate(&mqtt_task, "mqtt_task", 8192, NULL, 5, NULL);
+    publish_timer_init();
     cmd_scene_init();
     cmd_timer_init();
 }

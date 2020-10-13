@@ -23,7 +23,6 @@ static int uart_send_data(const char *data, const int len)
 static int uart_write_data(uint16_t addr, uint32_t data)
 {
     uint8_t tx_buf[8];
-    char *txData = &tx_buf;
     tx_buf[0] = V9260S_HEAD;
     tx_buf[1] = (uint8_t)((addr & 0x0f00) >> 4) + RacWrite;
     tx_buf[2] = (uint8_t)(addr & 0x00ff);
@@ -37,7 +36,7 @@ static int uart_write_data(uint16_t addr, uint32_t data)
         tx_buf[7] += tx_buf[i];
     }
     tx_buf[7] = ~tx_buf[7] + 0x33;
-    return uart_send_data(txData, strlen(txData));
+    return uart_send_data((const char *)tx_buf, 8);
 }
 
 static void uart_receive_data(void)
@@ -93,7 +92,6 @@ static void uart_reset(void)
 void uart_read_data(uint16_t addr, uint8_t num)
 {
     uint8_t tx_buf[8];
-    char *txData = &tx_buf;
     tx_buf[0] = V9260S_HEAD;
     tx_buf[1] = (uint8_t)((addr & 0x0f00) >> 4) + RacRead;
     tx_buf[2] = (uint8_t)(addr & 0x00ff);
@@ -107,7 +105,7 @@ void uart_read_data(uint16_t addr, uint8_t num)
         tx_buf[7] += tx_buf[i];
     }
     tx_buf[7] = ~tx_buf[7] + 0x33;
-    uart_send_data(txData, 8);
+    uart_send_data((const char *)tx_buf, 8);
     uart_receive_data();
 }
 

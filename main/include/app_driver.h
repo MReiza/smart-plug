@@ -8,4 +8,4 @@ void led_on(void);
 void led_quick_blink(void);
 void led_slow_blink(void);
 void led_medium_blink(void);
-void led_recv_message(void);
+void led_blink(int num, int delay);

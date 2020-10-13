@@ -82,13 +82,13 @@ void led_medium_blink(void)
     iot_led_state_write(led_handle, LED_MEDIUM_BLINK);
 }
 
-void led_recv_message(void)
+void led_blink(int num, int delay)
 {
     led_status_t prev_led_state = iot_led_state_read(led_handle);
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < num * 2; i++)
     {
         iot_led_state_write(led_handle, i % 2);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(delay / portTICK_PERIOD_MS);
     }
     iot_led_state_write(led_handle, prev_led_state);
 }

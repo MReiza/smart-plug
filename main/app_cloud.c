@@ -308,7 +308,7 @@ static void mqtt_task(void *pvParameters)
     }
 
     const uint16_t connection_timeout = 0;
-    const uint16_t keepalive_timeout = 180;
+    const uint16_t keepalive_timeout = 60;
 
     char jwt[IOTC_JWT_SIZE] = {0};
     size_t bytes_written = 0;

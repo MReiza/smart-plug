@@ -84,7 +84,7 @@ static void initialize_sntp(void)
 {
     ESP_LOGI(TAG, "Initializing SNTP");
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
-    sntp_setservername(0, "time.google.com");
+    sntp_setservername(0, "pool.ntp.org");
     sntp_init();
 }
 

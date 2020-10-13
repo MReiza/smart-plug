@@ -165,7 +165,6 @@ void cloud_publish(void)
 
     if (publish_ready)
     {
-        publish_telemetry(iotc_context, IOTC_INVALID_TIMED_TASK_HANDLE, NULL);
         publish_state(iotc_context, IOTC_INVALID_TIMED_TASK_HANDLE, NULL);
         publish_ready = false;
     }
@@ -195,7 +194,6 @@ void iotc_mqttlogic_subscribe_callback(
     IOTC_UNUSED(user_data);
     if (params != NULL && params->message.topic != NULL)
     {
-        // ESP_LOGI(TAG, "Subscription topic: %s", params->message.topic);
         char *sub_message = (char *)malloc(params->message.temporary_payload_data_length + 1);
         if (sub_message == NULL)
         {
@@ -227,7 +225,6 @@ void on_connection_state_changed(iotc_context_handle_t in_context_handle, void *
         iotc_subscribe(in_context_handle, subscribe_topic_command, IOTC_MQTT_QOS_AT_LEAST_ONCE, &iotc_mqttlogic_subscribe_callback, NULL);
 
         telemetry_publish_task = iotc_schedule_timed_task(in_context_handle, publish_telemetry, 3, 15, NULL);
-        state_publish_task = iotc_schedule_timed_task(in_context_handle, publish_state, 60, 15, NULL);
 
         publish_state(in_context_handle, IOTC_INVALID_TIMED_TASK_HANDLE, NULL);
         publish_telemetry(in_context_handle, IOTC_INVALID_TIMED_TASK_HANDLE, NULL);
@@ -252,7 +249,6 @@ void on_connection_state_changed(iotc_context_handle_t in_context_handle, void *
         if (IOTC_INVALID_TIMED_TASK_HANDLE != telemetry_publish_task)
         {
             iotc_cancel_timed_task(telemetry_publish_task);
-            iotc_cancel_timed_task(state_publish_task);
             telemetry_publish_task = IOTC_INVALID_TIMED_TASK_HANDLE;
         }
 

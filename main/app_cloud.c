@@ -205,7 +205,6 @@ void iotc_mqttlogic_subscribe_callback(
         ESP_LOGI(TAG, "Message payload: %s", sub_message);
         if (params->message.temporary_payload_data_length > 0)
         {
-            led_recv_message();
             parse_cmd(sub_message);
         }
         free(sub_message);

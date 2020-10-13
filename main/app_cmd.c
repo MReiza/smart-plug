@@ -139,6 +139,7 @@ void cmd_rmt(cJSON *cmd_message)
 
         TV_IR_TX(cmd);
     }
+    led_blink(2, 100);
 }
 
 void cmd_ota(void)

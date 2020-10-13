@@ -258,6 +258,8 @@ void on_connection_state_changed(iotc_context_handle_t in_context_handle, void *
         else
         {
             ESP_LOGE(TAG, "Connection closed, error %d", state);
+            led_quick_blink();
+            
             iotc_crypto_key_data_t iotc_connect_private_key_data;
             iotc_connect_private_key_data.crypto_key_signature_algorithm = IOTC_CRYPTO_KEY_SIGNATURE_ALGORITHM_ES256;
             iotc_connect_private_key_data.crypto_key_union_type = IOTC_CRYPTO_KEY_UNION_TYPE_PEM;

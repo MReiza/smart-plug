@@ -65,9 +65,9 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
     {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "IP: " IPSTR, IP2STR(&event->ip_info.ip));
-        led_quick_blink();
         retry_num = 0;
         xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+        led_quick_blink();
     }
     else if (event_base == SC_EVENT && event_id == SC_EVENT_SCAN_DONE)
     {

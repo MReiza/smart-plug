@@ -12,6 +12,8 @@ static const char *TAG = "WIFI";
 static int retry_num = 0;
 static bool provisioned;
 
+app_event_t app_event;
+
 static void smartconfig_task(void *arg);
 
 esp_err_t esp_wifi_is_provisioned(bool *provisioned)
@@ -38,11 +40,13 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
         {
             esp_wifi_connect();
             led_medium_blink();
+            app_event = APP_EVENT_WIFI_CONNECTING;
         }
         else
         {
             xTaskCreate(smartconfig_task, "smartconfig_task", 4096, NULL, 2, NULL);
             led_slow_blink();
+            app_event = APP_EVENT_SMARTCONFIG;
         }
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
@@ -52,6 +56,7 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
             ESP_LOGI(TAG, "Disconnected, reconnecting to AP...");
             esp_wifi_connect();
             led_medium_blink();
+            app_event = APP_EVENT_WIFI_DISCONNECTED;
             retry_num++;
         }
         else
@@ -68,6 +73,7 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
         retry_num = 0;
         xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
         led_quick_blink();
+        app_event = APP_EVENT_WIFI_CONNECTED;
     }
     else if (event_base == SC_EVENT && event_id == SC_EVENT_SCAN_DONE)
     {

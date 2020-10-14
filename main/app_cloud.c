@@ -25,9 +25,10 @@ char *private_key;
 char device_id[12];
 char version_name[32];
 
-iotc_mqtt_qos_t iotc_example_qos = IOTC_MQTT_QOS_AT_LEAST_ONCE;
-static iotc_timed_task_handle_t telemetry_publish_task, state_publish_task = IOTC_INVALID_TIMED_TASK_HANDLE;
-iotc_context_handle_t iotc_context = IOTC_INVALID_CONTEXT_HANDLE;
+static iotc_mqtt_qos_t iotc_example_qos = IOTC_MQTT_QOS_AT_LEAST_ONCE;
+static iotc_timed_task_handle_t telemetry_publish_task = IOTC_INVALID_TIMED_TASK_HANDLE;
+static iotc_context_handle_t iotc_context = IOTC_INVALID_CONTEXT_HANDLE;
+static iotc_crypto_key_data_t iotc_connect_private_key_data;
 
 static esp_timer_handle_t publish_timer;
 static bool publish_ready;
@@ -232,6 +233,7 @@ void on_connection_state_changed(iotc_context_handle_t in_context_handle, void *
             led_on();
         else
             led_off();
+        app_event = APP_EVENT_IOTC_CONNECTED;
         break;
 
     case IOTC_CONNECTION_STATE_OPEN_FAILED:
@@ -258,12 +260,6 @@ void on_connection_state_changed(iotc_context_handle_t in_context_handle, void *
         else
         {
             ESP_LOGE(TAG, "Connection closed, error %d", state);
-            led_quick_blink();
-            
-            iotc_crypto_key_data_t iotc_connect_private_key_data;
-            iotc_connect_private_key_data.crypto_key_signature_algorithm = IOTC_CRYPTO_KEY_SIGNATURE_ALGORITHM_ES256;
-            iotc_connect_private_key_data.crypto_key_union_type = IOTC_CRYPTO_KEY_UNION_TYPE_PEM;
-            iotc_connect_private_key_data.crypto_key_union.key_pem.key = private_key;
 
             char jwt[IOTC_JWT_SIZE] = {0};
             size_t bytes_written = 0;
@@ -277,6 +273,8 @@ void on_connection_state_changed(iotc_context_handle_t in_context_handle, void *
                 iotc_connect(in_context_handle, conn_data->username, jwt,
                              conn_data->client_id, conn_data->connection_timeout,
                              conn_data->keepalive_timeout, &on_connection_state_changed);
+                led_quick_blink();
+                app_event = APP_EVENT_IOTC_DISCONNECTED;
             }
         }
         break;
@@ -289,7 +287,6 @@ void on_connection_state_changed(iotc_context_handle_t in_context_handle, void *
 
 static void mqtt_task(void *pvParameters)
 {
-    iotc_crypto_key_data_t iotc_connect_private_key_data;
     iotc_connect_private_key_data.crypto_key_signature_algorithm = IOTC_CRYPTO_KEY_SIGNATURE_ALGORITHM_ES256;
     iotc_connect_private_key_data.crypto_key_union_type = IOTC_CRYPTO_KEY_UNION_TYPE_PEM;
     iotc_connect_private_key_data.crypto_key_union.key_pem.key = private_key;

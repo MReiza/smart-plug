@@ -13,11 +13,12 @@
 
 static relay_handle_t relay_handle;
 static led_handle_t led_handle;
+static bool relay_state;
 
 static void button_tap_cb(void *arg)
 {
-    bool output_state = relay_get_state();
-    relay_set_state(!output_state);
+    relay_state = relay_get_state();
+    relay_set_state(!relay_state);
 }
 
 static void button_press_5s_cb(void *arg)
@@ -46,7 +47,23 @@ void relay_set_state(bool state)
     else
     {
         relay_off();
-        led_off();
+        switch (app_event)
+        {
+        case APP_EVENT_SMARTCONFIG:
+            led_slow_blink();
+            break;
+        case APP_EVENT_WIFI_CONNECTING:
+        case APP_EVENT_WIFI_DISCONNECTED:
+            led_medium_blink();
+            break;
+        case APP_EVENT_WIFI_CONNECTED:
+        case APP_EVENT_IOTC_DISCONNECTED:
+            led_quick_blink();
+            break;
+        default:
+            led_off();
+            break;
+        }
     }
 
     cloud_publish();
@@ -69,28 +86,40 @@ void led_on(void)
 
 void led_quick_blink(void)
 {
-    iot_led_state_write(led_handle, LED_QUICK_BLINK);
+    relay_state = relay_get_state();
+    if (!relay_state)
+    {
+        iot_led_state_write(led_handle, LED_QUICK_BLINK);
+    }
 }
 
 void led_slow_blink(void)
 {
-    iot_led_state_write(led_handle, LED_SLOW_BLINK);
+    relay_state = relay_get_state();
+    if (!relay_state)
+    {
+        iot_led_state_write(led_handle, LED_SLOW_BLINK);
+    }
 }
 
 void led_medium_blink(void)
 {
-    iot_led_state_write(led_handle, LED_MEDIUM_BLINK);
+    relay_state = relay_get_state();
+    if (!relay_state)
+    {
+        iot_led_state_write(led_handle, LED_MEDIUM_BLINK);
+    }
 }
 
 void led_blink(int num, int delay)
 {
-    led_status_t prev_led_state = iot_led_state_read(led_handle);
+    led_status_t led_state = iot_led_state_read(led_handle);
     for (int i = 0; i < num * 2; i++)
     {
         iot_led_state_write(led_handle, i % 2);
         vTaskDelay(delay / portTICK_PERIOD_MS);
     }
-    iot_led_state_write(led_handle, prev_led_state);
+    iot_led_state_write(led_handle, led_state);
 }
 
 void driver_init(void)

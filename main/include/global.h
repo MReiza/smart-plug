@@ -25,6 +25,18 @@
 #define FACTORY_PARTITION_LABEL     "fact_cfg"
 #define FACTORY_PARTITION_NAMESPACE "irbfactory"
 
+typedef enum {
+    APP_EVENT_SMARTCONFIG,
+    APP_EVENT_WIFI_CONNECTING,
+    APP_EVENT_WIFI_CONNECTED,
+    APP_EVENT_WIFI_DISCONNECTED,
+    APP_EVENT_IOTC_CONNECTED,
+    APP_EVENT_IOTC_DISCONNECTED,
+    APP_EVENT_OTA,
+} app_event_t;
+
+extern app_event_t app_event;
+
 void wifi_init(void);
 void check_firmware_update(void);
 void google_iot_init(void);

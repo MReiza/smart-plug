@@ -15,6 +15,12 @@ typedef enum
 	TV_LEFT,
 	TV_RIGHT,
 	TV_OK,
+	TV_CHUP,
+    TV_CHDN,
+    TV_MENU,
+    TV_MUTE,
+    TV_RETURN,
+    TV_HOME
 } TV_KEY_INDEX;
 
 //STB Key List
@@ -69,6 +75,5 @@ typedef enum
 
 unsigned char TV_IR_TX(unsigned char keycode);
 unsigned char STB_IR_TX(unsigned char keycode);
-void TV_Brand_Set(unsigned char Set_Num);
-void STB_Brand_Set(unsigned char Set_Num);
+void TV_Brand_Set(unsigned short Set_Num);
 #endif

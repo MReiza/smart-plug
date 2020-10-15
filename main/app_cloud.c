@@ -161,18 +161,18 @@ void publish_telemetry(iotc_context_handle_t context_handle, iotc_timed_task_han
 
 void cloud_publish(void)
 {
-    if (iotc_context == IOTC_INVALID_CONTEXT_HANDLE)
-        return;
-
-    if (publish_ready)
+    if (iotc_context != IOTC_INVALID_CONTEXT_HANDLE)
     {
-        publish_state(iotc_context, IOTC_INVALID_TIMED_TASK_HANDLE, NULL);
-        publish_ready = false;
-    }
-    else
-    {
-        esp_timer_stop(publish_timer);
-        esp_timer_start_once(publish_timer, 500000);
+        if (publish_ready)
+        {
+            publish_state(iotc_context, IOTC_INVALID_TIMED_TASK_HANDLE, NULL);
+            publish_ready = false;
+        }
+        else
+        {
+            esp_timer_stop(publish_timer);
+            esp_timer_start_once(publish_timer, 500000);
+        }
     }
 }
 
@@ -263,7 +263,7 @@ void on_connection_state_changed(iotc_context_handle_t in_context_handle, void *
 
             char jwt[IOTC_JWT_SIZE] = {0};
             size_t bytes_written = 0;
-            state = iotc_create_iotcore_jwt(GIOT_PROJECT_ID, 3600, &iotc_connect_private_key_data, jwt, IOTC_JWT_SIZE, &bytes_written);
+            state = iotc_create_iotcore_jwt(GIOT_PROJECT_ID, 43200, &iotc_connect_private_key_data, jwt, IOTC_JWT_SIZE, &bytes_written);
             if (IOTC_STATE_OK != state)
             {
                 ESP_LOGE(TAG, "Failed to create JWT, error %d", state);
@@ -310,7 +310,7 @@ static void mqtt_task(void *pvParameters)
 
     char jwt[IOTC_JWT_SIZE] = {0};
     size_t bytes_written = 0;
-    iotc_state_t state = iotc_create_iotcore_jwt(GIOT_PROJECT_ID, 3600, &iotc_connect_private_key_data, jwt, IOTC_JWT_SIZE, &bytes_written);
+    iotc_state_t state = iotc_create_iotcore_jwt(GIOT_PROJECT_ID, 43200, &iotc_connect_private_key_data, jwt, IOTC_JWT_SIZE, &bytes_written);
     if (IOTC_STATE_OK != state)
     {
         printf("iotc_create_iotcore_jwt returned with error: %ul", state);

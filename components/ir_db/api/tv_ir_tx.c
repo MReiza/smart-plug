@@ -12,45 +12,42 @@
 #include "ir_remote.h"
 
 static const char *TAG = "TV_IR_TX";
-unsigned char TV_DbAccessCode = 0;
-unsigned char STB_DbAccessCode = 0;
+unsigned short TV_DbAccessCode = 0;
 
-static STB_DB_FORM *DbPtr;
+
+static TV_DB_FORM *DbPtr;
 static WAVE_FORM *WavePtr;
 static DATA_FORM *DataPtr;
 
-static unsigned char data[3];
+static unsigned char data[4];
 static unsigned char ToggleFlag = 0;
+bool flag = false;
 
 static void IR_Generate(unsigned char keycode);
 static inline void Pulse_Gen(unsigned char pulse, rmt_item32_t *item);
 
-void TV_Brand_Set(unsigned char Set_Num)
-{
-    find_set_num(Set_Num, &TV_DbForm[0].Num, tvdb_size, sizeof(TV_DB_FORM), &TV_DbAccessCode);
-    RMT.carrier_duty_ch[RMT_TX_CHANNEL].high = TV_WaveForm[TV_DbForm[TV_DbAccessCode].WaveForm].Freq.High * 10;
-    RMT.carrier_duty_ch[RMT_TX_CHANNEL].low = TV_WaveForm[TV_DbForm[TV_DbAccessCode].WaveForm].Freq.Low * 10;
-}
-
-void STB_Brand_Set(unsigned char Set_Num)
-{
-    find_set_num(Set_Num, &STB_DbForm[0].Num, stbdb_size, sizeof(STB_DB_FORM), &STB_DbAccessCode);
-    RMT.carrier_duty_ch[RMT_TX_CHANNEL].high = TV_WaveForm[STB_DbForm[STB_DbAccessCode].WaveForm].Freq.High * 10;
-    RMT.carrier_duty_ch[RMT_TX_CHANNEL].low = TV_WaveForm[STB_DbForm[STB_DbAccessCode].WaveForm].Freq.Low * 10;
-}
-
-void find_set_num(unsigned char Set_Num, unsigned char *setnum_ptr, unsigned char db_list_size, unsigned char db_size, unsigned char *DbAccessPtr)
+static void find_set_num_short(unsigned short Set_Num, unsigned int db_list_size, unsigned short *DbAccessPtr)
 {
     for (int i = 0; i < db_list_size; i++)
     {
-        if (*setnum_ptr == Set_Num)
+        if (TV_DbForm[i].Num == Set_Num)
         {
             *DbAccessPtr = i;
             break;
         }
-        setnum_ptr += db_size;
     }
 }
+
+void TV_Brand_Set(unsigned short Set_Num)
+{
+    find_set_num_short(Set_Num, tvdb_size, &TV_DbAccessCode);
+    DbPtr = &TV_DbForm[TV_DbAccessCode];
+    WavePtr = &TV_WaveForm[DbPtr->WaveForm];
+    DataPtr = &TV_DataForm[DbPtr->DataForm];
+    RMT.carrier_duty_ch[RMT_TX_CHANNEL].high = WavePtr->Freq.High * 10;
+    RMT.carrier_duty_ch[RMT_TX_CHANNEL].low = WavePtr->Freq.Low * 10;
+}
+
 
 /*
  * @brief IR Signal Generate Function
@@ -68,22 +65,6 @@ unsigned char TV_IR_TX(unsigned char keycode)
     return 1;
 }
 
-/*
- * @brief IR Signal Generate Function
- */
-unsigned char STB_IR_TX(unsigned char keycode)
-{
-    DbPtr = &STB_DbForm[STB_DbAccessCode];
-    WavePtr = &TV_WaveForm[DbPtr->WaveForm];
-    DataPtr = &TV_DataForm[DbPtr->DataForm];
-
-    if (DbPtr->Key[keycode] == 0xff)
-        return UNUSED_KEY;
-    else
-        IR_Generate(keycode);
-    return 1;
-}
-
 static int rmt_build_items(rmt_item32_t *item, unsigned char keycode)
 {
     int i = 0;
@@ -91,7 +72,7 @@ static int rmt_build_items(rmt_item32_t *item, unsigned char keycode)
     data[0] = DbPtr->Custom1;
     data[1] = DbPtr->Custom2;
     data[2] = DbPtr->Key[keycode];
-
+    data[3] = DbPtr->Default[1];
     while (dSeq < DATA_MAP_SIZE)
     {
         dType = DataPtr->DataMap[dSeq].Type;
@@ -99,43 +80,74 @@ static int rmt_build_items(rmt_item32_t *item, unsigned char keycode)
         dPulse = DataPtr->DataMap[dSeq].Pulse;
         dArray = DataPtr->DataMap[dSeq].Array;
 
-        switch (dType & 0xF0)
+        switch (dType)
         {
         case LEADER:
         case END:
             Pulse_Gen(dPulse, item++);
             i++;
             break;
+
         case DATA:
             db_data = data[dArray];
             while (dSize)
             {
-                if (dType & BAR)
-                {
-                    if (db_data & 0x01)
-                        Pulse_Gen(0, item);
-                    else
-                        Pulse_Gen(1, item);
-                }
+                if (db_data & 0x01)
+                    Pulse_Gen(1, item);
                 else
-                {
-                    if (db_data & 0x01)
-                        Pulse_Gen(1, item);
-                    else
-                        Pulse_Gen(0, item);
-                }
-                dSize--;
+                    Pulse_Gen(0, item);
                 db_data >>= 1;
+                dSize--;
                 item++;
                 i++;
             }
             break;
-        case TOGGLE:
-            ToggleFlag ^= 0x01;
-            Pulse_Gen(ToggleFlag, item);
-            item++;
-            i++;
+
+        case BAR:
+            db_data = data[dArray];
+            while (dSize)
+            {
+                if (db_data & 0x01)
+                    Pulse_Gen(0, item);
+                else
+                    Pulse_Gen(1, item);
+                db_data >>= 1;
+                ;
+                dSize--;
+                item++;
+                i++;
+            }
             break;
+
+            // case TOGGLE:
+            //     ToggleFlag ^= 0x01;
+            //     Pulse_Gen(ToggleFlag, item);
+            //     item++;
+            //     i++;
+            //     break;
+
+        case TOGGLE:
+            if (flag)
+            {
+                db_data = data[dArray];
+                flag = false;
+            }
+            else
+            {
+                db_data = ~data[dArray];
+                flag = true;
+            }
+            while (dSize)
+            {
+                if (db_data & 0x01)
+                    Pulse_Gen(1, item);
+                else
+                    Pulse_Gen(0, item);
+                db_data >>= 1;
+                dSize--;
+                item++;
+                i++;
+            }
         }
         dSeq++;
     }

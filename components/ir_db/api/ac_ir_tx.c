@@ -32,7 +32,7 @@ void AC_Brand_Set(unsigned short Set_Num)
     m_mode = 0;
     m_fan = 14;
 
-    rmt_set_num(Set_Num, &DbAccessCode);
+    rmt_set_num(Set_Num, &AC_DbForm[0].Num, acdb_size, sizeof(AC_DB_FORM), &DbAccessCode);
     DbPtr = &AC_DbForm[DbAccessCode];
     WavePtr = &AC_WaveForm[DbPtr->WaveForm];
     DataPtr = &AC_DataForm[DbPtr->DataForm];

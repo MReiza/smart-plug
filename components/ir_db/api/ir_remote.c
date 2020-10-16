@@ -15,14 +15,14 @@ void rmt_tx_init()
     rmt_driver_install(rmt_tx_config.channel, 0, 0);
 }
 
-void rmt_set_num(unsigned short Set_Num, unsigned short *DbAccessPtr)
+void rmt_set_num(unsigned short Set_Num,unsigned short *setnum_ptr,unsigned short db_list_size,unsigned short db_size,unsigned short *DbAccessPtr)
 {
-    for (int i = 0; i < acdb_size; i++)
-    {
-        if (AC_DbForm[i].Num == Set_Num)
-        {
-            *DbAccessPtr = i;
-            break;
+        for(int i = 0 ; i < db_list_size ; i++){
+                if(*setnum_ptr == Set_Num){
+                    *DbAccessPtr = i;
+                    break;
+                    }
+                setnum_ptr += db_size/2;
         }
-    }
+          
 }

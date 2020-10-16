@@ -8,4 +8,4 @@
 #define RMT_DATA_ITEM_NUM 256
 
 void rmt_tx_init(void);
-void rmt_set_num(unsigned short Set_Num, unsigned short *DbAccessPtr);
+void rmt_set_num(unsigned short Set_Num,unsigned short *setnum_ptr,unsigned short db_list_size,unsigned short db_size,unsigned short *DbAccessPtr);

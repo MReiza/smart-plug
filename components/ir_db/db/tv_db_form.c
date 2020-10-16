@@ -582,7 +582,7 @@ const WAVE_FORM TV_WaveForm[] = {
     {{{HIGH, 518}, {LOW, 1485}, {LOW, 0}, {LOW, 0}, {LOW, 0}, {LOW, 0}},
     {{HIGH, 518}, {LOW, 2490}, {LOW, 0}, {LOW, 0}, {LOW, 0}, {LOW, 0}},
     {{HIGH, 3049}, {LOW, 3007}, {LOW, 0}, {LOW, 0}, {LOW, 0}, {LOW, 0}},
-    {{LOW, 0}, {LOW, 0}, {LOW, 0}, {LOW, 0}, {LOW, 0}, {LOW, 0}},
+    {{HIGH, 518}, {LOW, 4037}, {LOW, 0}, {LOW, 0}, {LOW, 0}, {LOW, 0}},
     {{LOW, 0}, {LOW, 0}, {LOW, 0}, {LOW, 0}, {LOW, 0}, {LOW, 0}}}},
 
     //BEIJINGNECTV_1
@@ -4615,8 +4615,8 @@ const DATA_FORM TV_DataForm[] = {
     {{{LEADER, 2, 0, 0},
     {CUSTOM1, 0, 0, 8},
     {DEFAULT0, 0, 2, 8},
+    {LEADER, 3, 0, 0},
     {END, 0, 0, 0},
-    {NONE, 0, 0, 0},
     {NONE, 0, 0, 0},
     {NONE, 0, 0, 0},
     {NONE, 0, 0, 0},

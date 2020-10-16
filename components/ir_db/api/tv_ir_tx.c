@@ -12,7 +12,7 @@
 #include "ir_remote.h"
 
 static const char *TAG = "TV_IR_TX";
-unsigned short TV_DbAccessCode = 0;
+
 
 
 static TV_DB_FORM *DbPtr;
@@ -26,24 +26,15 @@ bool flag = false;
 static void IR_Generate(unsigned char keycode);
 static inline void Pulse_Gen(unsigned char pulse, rmt_item32_t *item);
 
-static void find_set_num_short(unsigned short Set_Num, unsigned int db_list_size, unsigned short *DbAccessPtr)
-{
-    for (int i = 0; i < db_list_size; i++)
-    {
-        if (TV_DbForm[i].Num == Set_Num)
-        {
-            *DbAccessPtr = i;
-            break;
-        }
-    }
-}
 
 void TV_Brand_Set(unsigned short Set_Num)
 {
-    find_set_num_short(Set_Num, tvdb_size, &TV_DbAccessCode);
+    unsigned short TV_DbAccessCode = 0;
+    rmt_set_num(Set_Num, &TV_DbForm[0].Num, tvdb_size, sizeof(TV_DB_FORM), &TV_DbAccessCode);
     DbPtr = &TV_DbForm[TV_DbAccessCode];
     WavePtr = &TV_WaveForm[DbPtr->WaveForm];
     DataPtr = &TV_DataForm[DbPtr->DataForm];
+
     RMT.carrier_duty_ch[RMT_TX_CHANNEL].high = WavePtr->Freq.High * 10;
     RMT.carrier_duty_ch[RMT_TX_CHANNEL].low = WavePtr->Freq.Low * 10;
 }
@@ -54,9 +45,6 @@ void TV_Brand_Set(unsigned short Set_Num)
  */
 unsigned char TV_IR_TX(unsigned char keycode)
 {
-    DbPtr = &TV_DbForm[TV_DbAccessCode];
-    WavePtr = &TV_WaveForm[DbPtr->WaveForm];
-    DataPtr = &TV_DataForm[DbPtr->DataForm];
 
     if (DbPtr->Key[keycode] == 0xff)
         return UNUSED_KEY;
